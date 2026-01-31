@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FileSlim SDK - Basic Image Compression</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 28px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 32px;
+    }
+    
+    .drop-zone {
+      border: 3px dashed #ddd;
+      border-radius: 12px;
+      padding: 60px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: #fafafa;
+    }
+    
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: #667eea;
+      background: #f0f0ff;
+    }
+    
+    .drop-zone input {
+      display: none;
+    }
+    
+    .drop-zone p {
+      color: #666;
+      font-size: 16px;
+    }
+    
+    .drop-zone .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    
+    .settings {
+      margin-top: 24px;
+      padding: 20px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+    
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .setting-row:last-child {
+      margin-bottom: 0;
+    }
+    
+    .setting-row label {
+      font-weight: 500;
+      color: #333;
+    }
+    
+    .setting-row input[type="range"] {
+      width: 150px;
+    }
+    
+    .setting-row select {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    .quality-value {
+      font-weight: bold;
+      color: #667eea;
+      min-width: 40px;
+      text-align: right;
+    }
+    
+    .results {
+      margin-top: 24px;
+      padding: 20px;
+      background: #e8f5e9;
+      border-radius: 8px;
+      display: none;
+    }
+    
+    .results.show {
+      display: block;
+    }
+    
+    .results h3 {
+      color: #2e7d32;
+      margin-bottom: 16px;
+    }
+    
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    
+    .result-row .label {
+      color: #666;
+    }
+    
+    .result-row .value {
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .savings {
+      font-size: 24px;
+      color: #2e7d32;
+      text-align: center;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #c8e6c9;
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 16px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      margin-top: 24px;
+    }
+    
+    .loading.show {
+      display: block;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .preview {
+      display: none;
+      margin-top: 24px;
+    }
+    
+    .preview.show {
+      display: block;
+    }
+    
+    .preview-images {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    
+    .preview-item {
+      text-align: center;
+    }
+    
+    .preview-item img {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .preview-item p {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🗜️ Image Compression</h1>
+    <p class="subtitle">Compress images in your browser - no upload required</p>
+    
+    <div class="drop-zone" id="dropZone">
+      <div class="icon">📁</div>
+      <p>Drop an image here or click to select</p>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+    
+    <div class="settings">
+      <div class="setting-row">
+        <label>Quality</label>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <input type="range" id="quality" min="10" max="100" value="80">
+          <span class="quality-value" id="qualityValue">80%</span>
+        </div>
+      </div>
+      
+      <div class="setting-row">
+        <label>Format</label>
+        <select id="format">
+          <option value="auto">Auto (Best)</option>
+          <option value="webp">WebP</option>
+          <option value="jpeg">JPEG</option>
+          <option value="png">PNG</option>
+          <option value="avif">AVIF</option>
+        </select>
+      </div>
+      
+      <div class="setting-row">
+        <label>Max Width</label>
+        <select id="maxWidth">
+          <option value="">Original</option>
+          <option value="1920" selected>1920px</option>
+          <option value="1280">1280px</option>
+          <option value="800">800px</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Compressing image...</p>
+    </div>
+    
+    <div class="results" id="results">
+      <h3>✅ Compression Complete</h3>
+      <div class="result-row">
+        <span class="label">Original Size</span>
+        <span class="value" id="originalSize">-</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Compressed Size</span>
+        <span class="value" id="compressedSize">-</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Format</span>
+        <span class="value" id="outputFormat">-</span>
+      </div>
+      <div class="savings" id="savings">-</div>
+      <button class="btn" id="downloadBtn">Download Compressed Image</button>
+    </div>
+    
+    <div class="preview" id="preview">
+      <div class="preview-images">
+        <div class="preview-item">
+          <img id="originalPreview" alt="Original">
+          <p>Original</p>
+        </div>
+        <div class="preview-item">
+          <img id="compressedPreview" alt="Compressed">
+          <p>Compressed</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load FileSlim SDK from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@fileslim/compress/dist/index.umd.js"></script>
+  
+  <!-- For local development, use: -->
+  <!-- <script src="../dist/index.umd.js"></script> -->
+  
+  <script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const qualitySlider = document.getElementById('quality');
+    const qualityValue = document.getElementById('qualityValue');
+    const formatSelect = document.getElementById('format');
+    const maxWidthSelect = document.getElementById('maxWidth');
+    const loading = document.getElementById('loading');
+    const results = document.getElementById('results');
+    const preview = document.getElementById('preview');
+    
+    let compressedBlob = null;
+    let originalFileName = '';
+    
+    // Quality slider
+    qualitySlider.addEventListener('input', () => {
+      qualityValue.textContent = qualitySlider.value + '%';
+    });
+    
+    // Drop zone events
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        processFile(file);
+      }
+    });
+    
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) {
+        processFile(fileInput.files[0]);
+      }
+    });
+    
+    async function processFile(file) {
+      originalFileName = file.name;
+      
+      // Show loading
+      loading.classList.add('show');
+      results.classList.remove('show');
+      preview.classList.remove('show');
+      
+      try {
+        // Get settings
+        const quality = parseInt(qualitySlider.value) / 100;
+        const format = formatSelect.value;
+        const maxWidth = maxWidthSelect.value ? parseInt(maxWidthSelect.value) : null;
+        
+        // Compress using FileSlim SDK
+        compressedBlob = await FileSlim.compressImage(file, {
+          quality,
+          format,
+          maxWidth,
+          removeMetadata: true
+        });
+        
+        // Calculate savings
+        const savings = ((1 - compressedBlob.size / file.size) * 100).toFixed(1);
+        
+        // Update results
+        document.getElementById('originalSize').textContent = FileSlim.formatFileSize(file.size);
+        document.getElementById('compressedSize').textContent = FileSlim.formatFileSize(compressedBlob.size);
+        document.getElementById('outputFormat').textContent = compressedBlob.type.replace('image/', '').toUpperCase();
+        document.getElementById('savings').textContent = `Saved ${savings}%`;
+        
+        // Show previews
+        document.getElementById('originalPreview').src = URL.createObjectURL(file);
+        document.getElementById('compressedPreview').src = URL.createObjectURL(compressedBlob);
+        
+        // Show results
+        loading.classList.remove('show');
+        results.classList.add('show');
+        preview.classList.add('show');
+        
+      } catch (error) {
+        loading.classList.remove('show');
+        alert('Compression failed: ' + error.message);
+      }
+    }
+    
+    // Download button
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      if (compressedBlob) {
+        const ext = compressedBlob.type.replace('image/', '');
+        const newName = originalFileName.replace(/\.[^.]+$/, `_compressed.${ext}`);
+        FileSlim.downloadFile(compressedBlob, newName);
+      }
+    });
+  </script>
+</body>
+</html>

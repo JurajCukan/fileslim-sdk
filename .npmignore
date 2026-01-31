@@ -1,0 +1,40 @@
+# Source files
+src/
+
+# Examples
+examples/
+
+# Development files
+*.ts
+!*.d.ts
+tsconfig.json
+vite.config.ts
+
+# Documentation (keep README.md)
+PUBLISHING.md
+CHANGELOG.md
+
+# Tests
+__tests__/
+*.test.ts
+*.spec.ts
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build artifacts (keep dist/)
+node_modules/

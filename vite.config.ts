@@ -1,43 +1,44 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import dts from 'vite-plugin-dts';
 
 export default defineConfig({
+  plugins: [
+    dts({
+      insertTypesEntry: true,
+      rollupTypes: true
+    })
+  ],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'FileSlimCompress',
+      name: 'FileSlim',
       formats: ['es', 'cjs', 'umd'],
       fileName: (format) => {
-        if (format === 'es') return 'index.es.js';
-        if (format === 'cjs') return 'index.cjs.js';
+        if (format === 'es') return 'index.js';
+        if (format === 'cjs') return 'index.cjs';
         return 'index.umd.js';
       }
     },
     rollupOptions: {
-      external: [
-        'browser-image-compression',
-        'pdf-lib',
-        '@jsquash/jpeg',
-        '@jsquash/png',
-        '@jsquash/webp'
-      ],
+      external: [],
       output: {
-        globals: {
-          'browser-image-compression': 'imageCompression',
-          'pdf-lib': 'PDFLib',
-          '@jsquash/jpeg': 'jsquashJpeg',
-          '@jsquash/png': 'jsquashPng',
-          '@jsquash/webp': 'jsquashWebp'
-        }
+        globals: {}
       }
     },
     sourcemap: true,
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
-        drop_debugger: true
+        drop_console: false
       }
-    }
+    },
+    target: 'es2020'
+  },
+  define: {
+    'import.meta.env.DEV': 'false'
+  },
+  worker: {
+    format: 'es'
   }
 });
