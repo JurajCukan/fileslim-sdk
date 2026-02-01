@@ -6,39 +6,41 @@ export default defineConfig({
   plugins: [
     dts({
       insertTypesEntry: true,
-      rollupTypes: true
     })
   ],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'FileSlim',
-      formats: ['es', 'cjs', 'umd'],
+      name: 'FileSlimCompress',
+      formats: ['es', 'cjs'],
       fileName: (format) => {
-        if (format === 'es') return 'index.js';
-        if (format === 'cjs') return 'index.cjs';
-        return 'index.umd.js';
+        if (format === 'es') return 'index.es.js';
+        return 'index.cjs.js';
       }
     },
     rollupOptions: {
-      external: [],
+      external: [
+        'browser-image-compression',
+        'pdf-lib',
+        '@jsquash/jpeg',
+        '@jsquash/png'
+      ],
       output: {
-        globals: {}
+        globals: {
+          'browser-image-compression': 'imageCompression',
+          'pdf-lib': 'PDFLib',
+          '@jsquash/jpeg': 'jsquashJpeg',
+          '@jsquash/png': 'jsquashPng'
+        }
       }
     },
     sourcemap: true,
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: false
+        drop_console: true,
+        drop_debugger: true
       }
-    },
-    target: 'es2020'
-  },
-  define: {
-    'import.meta.env.DEV': 'false'
-  },
-  worker: {
-    format: 'es'
+    }
   }
 });
