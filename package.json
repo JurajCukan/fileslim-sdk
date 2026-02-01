@@ -1,6 +1,6 @@
 {
   "name": "@fileslim/compress",
-  "version": "1.0.0",
+  "version": "2.0.1",
   "description": "Client-side file compression library - compress images and PDFs in the browser with zero server costs",
   "author": "FileSlim",
   "license": "MIT",
@@ -25,20 +25,17 @@
     "pdf",
     "browser",
     "client-side",
-    "file-compression",
-    "optimize",
     "webp",
-    "avif",
     "jpeg",
     "png"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/fileslim/sdk"
+    "url": "https://github.com/JurajCukan/fileslim-sdk"
   },
   "homepage": "https://fileslim.com/sdk",
   "bugs": {
-    "url": "https://github.com/fileslim/sdk/issues"
+    "url": "https://github.com/JurajCukan/fileslim-sdk/issues"
   },
   "scripts": {
     "build": "vite build",
@@ -47,21 +44,24 @@
   },
   "dependencies": {
     "browser-image-compression": "^2.0.2",
-    "pdf-lib": "^1.17.1",
-    "jszip": "^3.10.1",
+    "pdf-lib": "^1.17.1"
+  },
+  "peerDependencies": {
     "@jsquash/jpeg": "^1.6.0",
     "@jsquash/png": "^3.1.1",
-    "@jsquash/webp": "^1.5.0",
-    "@jsquash/avif": "^2.1.1",
-    "@jsquash/jxl": "^1.3.0",
-    "@jsquash/oxipng": "^2.3.0"
+    "@jsquash/webp": "^1.5.0"
+  },
+  "peerDependenciesMeta": {
+    "@jsquash/jpeg": { "optional": true },
+    "@jsquash/png": { "optional": true },
+    "@jsquash/webp": { "optional": true }
   },
   "devDependencies": {
-    "typescript": "^5.3.0",
+    "typescript": "^5.0.0",
     "vite": "^5.0.0",
-    "vite-plugin-dts": "^3.7.0"
+    "vite-plugin-dts": "^3.0.0",
+    "terser": "^5.44.0"
   },
-  "peerDependencies": {},
   "sideEffects": false,
   "engines": {
     "node": ">=16.0.0"
