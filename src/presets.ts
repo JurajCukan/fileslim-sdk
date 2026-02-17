@@ -3,15 +3,15 @@
  * Pre-configured compression settings for common use cases
  */
 
-import type { PresetConfig, PresetName } from './types';
+import type { PresetConfig, PresetName, PDFModeConfig } from './types';
 
 /** Built-in compression presets */
 export const PRESETS: Record<PresetName, PresetConfig> = {
-  /** Optimized for websites - good balance of quality and size */
+  /** Optimized for websites - picks best format automatically */
   web: {
     quality: 0.75,
     maxWidth: 1920,
-    format: 'webp'
+    format: 'auto'
   },
   
   /** Optimized for social media platforms */
@@ -37,9 +37,9 @@ export const PRESETS: Record<PresetName, PresetConfig> = {
 };
 
 /** PDF compression mode settings */
-export const PDF_MODES = {
-  low: { imageQuality: 0.85, description: 'Light compression, best quality' },
-  balanced: { imageQuality: 0.70, description: 'Good balance of quality and size' },
-  high: { imageQuality: 0.50, description: 'Aggressive compression, smaller files' },
-  maximum: { imageQuality: 0.30, description: 'Maximum compression, lowest quality' }
+export const PDF_MODES: Record<string, PDFModeConfig> = {
+  low: { imageQuality: 0.85, maxImageDimension: 2000, description: 'Light compression, best quality' },
+  balanced: { imageQuality: 0.70, maxImageDimension: 1600, description: 'Good balance of quality and size' },
+  high: { imageQuality: 0.50, maxImageDimension: 1200, description: 'Aggressive compression, smaller files' },
+  maximum: { imageQuality: 0.30, maxImageDimension: 1000, description: 'Maximum compression, lowest quality' }
 };

@@ -1,21 +1,16 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import dts from 'vite-plugin-dts';
 
 export default defineConfig({
-  plugins: [
-    dts({
-      insertTypesEntry: true,
-    })
-  ],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'FileSlimCompress',
-      formats: ['es', 'cjs'],
+      formats: ['es', 'cjs', 'umd'],
       fileName: (format) => {
         if (format === 'es') return 'index.es.js';
-        return 'index.cjs.js';
+        if (format === 'cjs') return 'index.cjs.js';
+        return 'index.umd.js';
       }
     },
     rollupOptions: {
@@ -23,14 +18,18 @@ export default defineConfig({
         'browser-image-compression',
         'pdf-lib',
         '@jsquash/jpeg',
-        '@jsquash/png'
+        '@jsquash/png',
+        '@jsquash/webp',
+        '@jsquash/avif'
       ],
       output: {
         globals: {
           'browser-image-compression': 'imageCompression',
           'pdf-lib': 'PDFLib',
           '@jsquash/jpeg': 'jsquashJpeg',
-          '@jsquash/png': 'jsquashPng'
+          '@jsquash/png': 'jsquashPng',
+          '@jsquash/webp': 'jsquashWebp',
+          '@jsquash/avif': 'jsquashAvif'
         }
       }
     },

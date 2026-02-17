@@ -1,6 +1,6 @@
 {
   "name": "@fileslim/compress",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Client-side image and PDF compression. Zero servers, complete privacy.",
   "author": "Juraj Cukan",
   "license": "MIT",
@@ -19,7 +19,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && tsc --emitDeclarationOnly --declaration --outDir dist",
     "prepublishOnly": "npm run build",
     "test": "echo \"No tests yet\""
   },
@@ -29,7 +29,9 @@
   },
   "peerDependencies": {
     "@jsquash/jpeg": "^1.6.0",
-    "@jsquash/png": "^3.1.1"
+    "@jsquash/png": "^3.1.1",
+    "@jsquash/webp": "^1.5.0",
+    "@jsquash/avif": "^2.1.0"
   },
   "peerDependenciesMeta": {
     "@jsquash/jpeg": {
@@ -37,10 +39,15 @@
     },
     "@jsquash/png": {
       "optional": true
+    },
+    "@jsquash/webp": {
+      "optional": true
+    },
+    "@jsquash/avif": {
+      "optional": true
     }
   },
   "devDependencies": {
-    "terser": "^5.44.0",
     "typescript": "^5.0.0",
     "vite": "^5.0.0",
     "vite-plugin-dts": "^3.0.0"
@@ -58,6 +65,8 @@
     "image",
     "pdf",
     "client-side",
+    "webp",
+    "avif",
     "browser",
     "jpeg",
     "png",

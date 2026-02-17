@@ -5,12 +5,19 @@
  * @example
  * import { compress, compressPDF, compressBatch } from '@fileslim/compress';
  * 
- * // Compress an image
- * const result = await compress(file);
+ * // Compress an image (uses AVIF/WebP via @jsquash when available)
+ * const result = await compress(file, { format: 'auto' });
  * console.log(`Saved ${result.savings}%`);
  * 
- * // Compress a PDF
- * const pdf = await compressPDF(pdfFile);
+ * // Compress with quality scoring
+ * const scored = await compress(file, { measureQuality: true });
+ * console.log(scored.qualityScore?.rating); // "excellent"
+ * 
+ * // Compress a PDF (full image recompression pipeline)
+ * const pdf = await compressPDF(pdfFile, {
+ *   mode: 'high',
+ *   onProgress: (phase, pct) => console.log(`${phase}: ${pct}%`)
+ * });
  * 
  * // Batch compress multiple files
  * const results = await compressBatch(files, {
@@ -42,5 +49,7 @@ export type {
   ImageFormat,
   PresetName,
   PDFMode,
-  PresetConfig
+  PresetConfig,
+  PDFModeConfig,
+  QualityScore
 } from './types';
