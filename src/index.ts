@@ -1,29 +1,13 @@
 /**
  * @fileslim/compress
- * Client-side image and PDF compression. Zero servers, complete privacy.
+ * Client-side file compression. Zero servers, complete privacy.
+ * Supports images, PDFs, and DOCX documents.
  * 
  * @example
  * import { compress, compressPDF, compressBatch } from '@fileslim/compress';
  * 
- * // Compress an image (uses AVIF/WebP via @jsquash when available)
  * const result = await compress(file, { format: 'auto' });
- * console.log(`Saved ${result.savings}%`);
- * 
- * // Compress with quality scoring
- * const scored = await compress(file, { measureQuality: true });
- * console.log(scored.qualityScore?.rating); // "excellent"
- * 
- * // Compress a PDF (full image recompression pipeline)
- * const pdf = await compressPDF(pdfFile, {
- *   mode: 'high',
- *   onProgress: (phase, pct) => console.log(`${phase}: ${pct}%`)
- * });
- * 
- * // Batch compress multiple files
- * const results = await compressBatch(files, {
- *   preset: 'web',
- *   onProgress: (i, total) => console.log(`${i}/${total}`)
- * });
+ * const pdf = await compressPDF(pdfFile, { mode: 'high' });
  * 
  * @packageDocumentation
  */
@@ -34,7 +18,7 @@ export { compressPDF } from './pdf';
 export { compressBatch } from './batch';
 
 // Presets for quick configuration
-export { PRESETS, PDF_MODES } from './presets';
+export { PRESETS, PDF_MODES, DOCX_PRESETS } from './presets';
 
 // Utility functions
 export { formatSize, calculateSavings } from './utils';
@@ -42,14 +26,19 @@ export { formatSize, calculateSavings } from './utils';
 // Type exports
 export type {
   CompressOptions,
+  CompressionMode,
+  CompressionProgressEvent,
   PDFOptions,
+  DocxOptions,
   BatchOptions,
   CompressedFile,
   BatchResult,
   ImageFormat,
   PresetName,
   PDFMode,
+  DocxPresetName,
   PresetConfig,
   PDFModeConfig,
+  DocxPresetConfig,
   QualityScore
 } from './types';

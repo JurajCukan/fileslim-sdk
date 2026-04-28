@@ -16,9 +16,11 @@ import { calculateSavings } from './utils';
  * save strategies to pick the smallest output.
  * 
  * @example
+ * // Basic usage
  * const result = await compressPDF(file);
  * 
  * @example
+ * // With progress tracking
  * const result = await compressPDF(file, {
  *   mode: 'high',
  *   onProgress: (phase, pct) => console.log(`${phase}: ${pct}%`)
@@ -28,6 +30,7 @@ export async function compressPDF(
   file: File,
   options?: PDFOptions
 ): Promise<CompressedFile> {
+  // Validate input
   if (!file || !(file instanceof File)) {
     throw new Error('Invalid input: expected a File object');
   }
@@ -36,7 +39,7 @@ export async function compressPDF(
     throw new Error(`Invalid file type: ${file.type}. Expected a PDF file.`);
   }
 
-  const { PDFDocument, PDFName, PDFRawStream } = await import('pdf-lib');
+  const { PDFDocument, PDFName, PDFDict, PDFRawStream } = await import('pdf-lib');
 
   const mode = options?.mode ?? 'balanced';
   const modeConfig = PDF_MODES[mode];
@@ -54,6 +57,7 @@ export async function compressPDF(
     
     onProgress?.('Analyzing', 10);
 
+    // ── Phase 1: Extract and recompress embedded images ──
     onProgress?.('Extracting images', 15);
     
     const compressedImages = await extractAndCompressImages(
@@ -67,11 +71,13 @@ export async function compressPDF(
       }
     );
 
+    // Replace images in PDF
     if (compressedImages.length > 0) {
       onProgress?.('Replacing images', 70);
       replaceImagesInPDF(pdfDoc, PDFName, PDFRawStream, compressedImages);
     }
 
+    // ── Phase 2: Strip metadata ──
     if (stripMetadata) {
       onProgress?.('Removing metadata', 75);
       pdfDoc.setTitle('');
@@ -82,11 +88,13 @@ export async function compressPDF(
       pdfDoc.setProducer('FileSlim');
     }
 
+    // ── Phase 3: Multi-strategy save — pick smallest ──
     onProgress?.('Saving', 80);
     
     let bestResult: Uint8Array | null = null;
     let bestSize = file.size;
 
+    // Strategy 1: Direct save with object streams
     try {
       onProgress?.('Saving', 85);
       const result = await pdfDoc.save({
@@ -100,6 +108,7 @@ export async function compressPDF(
       }
     } catch { /* strategy failed */ }
 
+    // Strategy 2: Copy to new document
     try {
       onProgress?.('Saving', 90);
       const newDoc = await PDFDocument.create();
@@ -135,6 +144,7 @@ export async function compressPDF(
       format: 'application/pdf'
     };
 
+    // If compressed is larger, return original
     if (compressedBlob.size >= file.size) {
       return {
         ...result,
@@ -162,7 +172,43 @@ interface CompressedImage {
   mimeType: string;
 }
 
-async function extractAndCompressImages(
+async function decompressFlateDataSDK(data: Uint8Array): Promise<Uint8Array> {
+  const ds = new DecompressionStream('deflate');
+  const writer = ds.writable.getWriter();
+  const reader = ds.readable.getReader();
+  writer.write(data.slice(0));
+  writer.close();
+  const chunks: Uint8Array[] = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  const result = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
+  return result;
+}
+
+function rawPixelsToRGBASDK(raw: Uint8Array, w: number, h: number, components: number): Uint8ClampedArray {
+  const rgba = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    if (components === 3) {
+      rgba[i*4] = raw[i*3]; rgba[i*4+1] = raw[i*3+1]; rgba[i*4+2] = raw[i*3+2];
+    } else if (components === 1) {
+      rgba[i*4] = rgba[i*4+1] = rgba[i*4+2] = raw[i];
+    } else if (components === 4) {
+      const c=raw[i*4], m=raw[i*4+1], y=raw[i*4+2], k=raw[i*4+3];
+      rgba[i*4] = 255*(1-c/255)*(1-k/255);
+      rgba[i*4+1] = 255*(1-m/255)*(1-k/255);
+      rgba[i*4+2] = 255*(1-y/255)*(1-k/255);
+    }
+    rgba[i*4+3] = 255;
+  }
+  return rgba;
+}
+
   pdfDoc: any,
   PDFName: any,
   quality: number,
@@ -173,6 +219,7 @@ async function extractAndCompressImages(
   const imageRefs: Array<{ ref: any; obj: any; width: number; height: number }> = [];
 
   try {
+    // Collect all image XObjects
     const objects = pdfDoc.context.enumerateIndirectObjects();
     
     for (const [ref, obj] of objects) {
@@ -201,6 +248,7 @@ async function extractAndCompressImages(
 
     onProgress?.(0, imageRefs.length);
 
+    // Process images in batches of 5
     const BATCH_SIZE = 5;
     let processed = 0;
 
@@ -214,20 +262,63 @@ async function extractAndCompressImages(
             const compressedImageBytes = obj.getContents?.();
             if (!compressedImageBytes || compressedImageBytes.length === 0) return null;
 
+            // Determine filter type
+            const filter = dict.has(PDFName.of('Filter')) ? dict.get(PDFName.of('Filter'))?.toString() ?? '' : '';
+            const isDCT = filter.includes('DCT');
+            const isFlate = filter.includes('FlateDecode');
             let mimeType = 'image/jpeg';
-            if (dict.has(PDFName.of('Filter'))) {
-              const filter = dict.get(PDFName.of('Filter'))?.toString();
-              if (filter?.includes('FlateDecode')) mimeType = 'image/png';
+            
+            const canvas = document.createElement('canvas');
+            let ctx: CanvasRenderingContext2D | null = null;
+            
+            if (isDCT) {
+              const imageBlob = new Blob([compressedImageBytes], { type: 'image/jpeg' });
+              let imageBitmap: ImageBitmap;
+              try {
+                imageBitmap = await createImageBitmap(imageBlob);
+              } catch { return null; }
+              canvas.width = imageBitmap.width;
+              canvas.height = imageBitmap.height;
+              ctx = canvas.getContext('2d');
+              if (!ctx) { imageBitmap.close(); return null; }
+              ctx.drawImage(imageBitmap, 0, 0);
+              imageBitmap.close();
+            } else if (isFlate) {
+              let decompressed: Uint8Array;
+              try {
+                decompressed = await decompressFlateDataSDK(compressedImageBytes);
+              } catch { return null; }
+              
+              const bpc = dict.has(PDFName.of('BitsPerComponent')) ? dict.get(PDFName.of('BitsPerComponent'))?.asNumber() ?? 8 : 8;
+              const cs = dict.has(PDFName.of('ColorSpace')) ? dict.get(PDFName.of('ColorSpace'))?.toString() ?? '/DeviceRGB' : '/DeviceRGB';
+              const components = cs.includes('Gray') ? 1 : cs.includes('CMYK') ? 4 : 3;
+              
+              const expectedSize = width * height * components * (bpc / 8);
+              if (decompressed.length < expectedSize) return null;
+              
+              const rgba = rawPixelsToRGBASDK(decompressed, width, height, components);
+              const imageData = new ImageData(rgba.slice(0) as any, width, height);
+              
+              canvas.width = width;
+              canvas.height = height;
+              ctx = canvas.getContext('2d');
+              if (!ctx) return null;
+              ctx.putImageData(imageData, 0, 0);
+            } else {
+              // Unknown filter — try createImageBitmap
+              const imageBlob = new Blob([compressedImageBytes], { type: 'image/jpeg' });
+              try {
+                const ib = await createImageBitmap(imageBlob);
+                canvas.width = ib.width;
+                canvas.height = ib.height;
+                ctx = canvas.getContext('2d');
+                if (!ctx) { ib.close(); return null; }
+                ctx.drawImage(ib, 0, 0);
+                ib.close();
+              } catch { return null; }
             }
 
-            const imageBlob = new Blob([compressedImageBytes], { type: mimeType });
-            let imageBitmap: ImageBitmap;
-            try {
-              imageBitmap = await createImageBitmap(imageBlob);
-            } catch {
-              return null;
-            }
-
+            // Size-aware quality adjustment
             let targetQuality = quality;
             const area = width * height;
             if (area < 100000) {
@@ -236,51 +327,45 @@ async function extractAndCompressImages(
               targetQuality = Math.max(quality - 0.10, 0.30);
             }
 
-            let targetWidth = imageBitmap.width;
-            let targetHeight = imageBitmap.height;
+            // Calculate target dimensions
+            let targetWidth = canvas.width;
+            let targetHeight = canvas.height;
             if (targetWidth > maxDimension || targetHeight > maxDimension) {
               const scale = Math.min(maxDimension / targetWidth, maxDimension / targetHeight);
               targetWidth = Math.round(targetWidth * scale);
               targetHeight = Math.round(targetHeight * scale);
+              const resizeCanvas = document.createElement('canvas');
+              resizeCanvas.width = targetWidth;
+              resizeCanvas.height = targetHeight;
+              const resizeCtx = resizeCanvas.getContext('2d');
+              if (!resizeCtx) return null;
+              resizeCtx.imageSmoothingEnabled = true;
+              resizeCtx.imageSmoothingQuality = 'high';
+              resizeCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+              canvas.width = targetWidth;
+              canvas.height = targetHeight;
+              ctx!.drawImage(resizeCanvas, 0, 0);
             }
 
-            const canvas = document.createElement('canvas');
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) { imageBitmap.close(); return null; }
+            const imageData = ctx!.getImageData(0, 0, canvas.width, canvas.height);
 
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(imageBitmap, 0, 0, targetWidth, targetHeight);
-            imageBitmap.close();
-
-            const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
-
+            // Encode as JPEG
             let compressedData: Uint8Array;
             let outputMime = 'image/jpeg';
 
             try {
-              if (mimeType.includes('png')) {
-                const { encode } = await import('@jsquash/png');
-                const encoded = await encode(imageData);
-                compressedData = new Uint8Array(encoded);
-                outputMime = 'image/png';
-              } else {
-                const { encode } = await import('@jsquash/jpeg');
-                const encoded = await encode(imageData, { quality: Math.round(targetQuality * 100) });
-                compressedData = new Uint8Array(encoded);
-                outputMime = 'image/jpeg';
-              }
+              const { encode } = await import('@jsquash/jpeg');
+              const encoded = await encode(imageData, { quality: Math.round(targetQuality * 100) });
+              compressedData = new Uint8Array(encoded);
             } catch {
               const blob = await new Promise<Blob | null>((resolve) => {
                 canvas.toBlob(resolve, 'image/jpeg', targetQuality);
               });
               if (!blob) return null;
               compressedData = new Uint8Array(await blob.arrayBuffer());
-              outputMime = 'image/jpeg';
             }
 
+            // Only keep if we actually saved space
             if (compressedData.length < compressedImageBytes.length) {
               return { ref, compressedData, mimeType: outputMime };
             }
@@ -298,10 +383,11 @@ async function extractAndCompressImages(
       processed += batch.length;
       onProgress?.(processed, imageRefs.length);
 
+      // Yield to main thread between batches
       await new Promise(resolve => setTimeout(resolve, 10));
     }
   } catch {
-    // Silent fail
+    // Silent fail — compression still works via object streams
   }
 
   return results;
@@ -313,7 +399,7 @@ async function extractAndCompressImages(
 
 function replaceImagesInPDF(
   pdfDoc: any,
-  _PDFName: any,
+  PDFName: any,
   PDFRawStream: any,
   compressedImages: CompressedImage[]
 ): void {

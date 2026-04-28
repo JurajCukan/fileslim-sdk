@@ -59,6 +59,7 @@ export function getMimeType(format: string): string {
     png: 'image/png',
     webp: 'image/webp',
     avif: 'image/avif',
+    jxl: 'image/jxl',
     auto: 'image/webp' // Default fallback for auto
   };
   return mimeTypes[format] || 'image/webp';
