@@ -1,90 +1,60 @@
-# Changelog
+# Changelog — @fileslim/compress
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2025-01-02
+## [Unreleased]
 
 ### Added
+- Smoke test suite (vitest) covering exports, PRESETS, PDF_MODES, and utils
+- `test`, `test:smoke`, `test:watch` npm scripts
+- `prepublishOnly` now also runs the smoke tests
+- CHANGELOG tracking for npm consumers
 
-- **Core Compression Functions**
-  - `compressImage()` - Simple image compression with quality control
-  - `compressImageAdvanced()` - Advanced compression with format conversion and dimension control
-  - `compressPDF()` - PDF compression with multiple quality modes
-  - `compressBatch()` - Batch compression into a single ZIP file
-  - `compressBatchIndividual()` - Batch compression with individual file results
+## [2.3.0] - 2026-05-01
 
-- **Format Support**
-  - WebP compression and conversion
-  - AVIF compression and conversion (where supported)
-  - JPEG XL compression and conversion (where supported)
-  - OxiPNG lossless PNG optimization
-  - Standard JPEG/PNG compression
+### Added
+- Batch compression helpers (`compressBatch`)
+- Worker pool parallelization for multi-file image jobs
+- Preset system for common use cases (`web`, `social`, `email`, `print`)
+- DOCX presets (`email`, `balanced`, `quality`)
 
-- **Format-Specific Functions**
-  - `compressToWebP()` - Convert any image to WebP
-  - `compressToAVIF()` - Convert any image to AVIF
-  - `compressToJXL()` - Convert any image to JPEG XL
-  - `compressPNG()` - Lossless PNG optimization
+### Changed
+- Build system emits both ESM (`index.es.js`) and CJS (`index.cjs.js`) outputs
+- Improved performance on large file operations via worker pool
 
-- **Compression Profiles**
-  - `maximum` - Smallest file size (quality: 60)
-  - `balanced` - Good balance of quality and size (quality: 75)
-  - `quality` - Higher quality, larger files (quality: 85)
-  - `lossless` - No quality loss, larger files (quality: 100)
+### Fixed
+- JPEG quality preset inconsistency on mobile devices
+- Memory leaks in worker cleanup
 
-- **Quality Assessment**
-  - `calculateQualityScore()` - SSIM-based quality scoring
-  - Perceptual quality metrics
+## [2.2.0] - 2026-04-15
 
-- **Utility Functions**
-  - `formatFileSize()` - Human-readable file size formatting
-  - `downloadFile()` - Browser file download helper
-  - `createZipFromFiles()` - Create ZIP archives from multiple files
-  - `fileToBlob()` - Convert File to Blob
-  - `blobToFile()` - Convert Blob to File
-  - `getImageDimensions()` - Get image width and height
+### Added
+- Email preset for inline image compression
+- Print preset for high-quality delivery
+- WebP format support
 
-- **Browser Detection**
-  - `checkFormatSupport()` - Check browser support for modern formats
-  - `detectOptimalFormat()` - Auto-detect best format for current browser
+### Changed
+- Updated `@jsquash/*` peer dependencies to latest versions
 
-- **Configuration**
-  - Global `configure()` function for SDK-wide settings
-  - Support for custom logging and debug mode
+## [2.1.0] - 2026-04-01
 
-- **Build Formats**
-  - ES Modules (index.js)
-  - CommonJS (index.cjs)
-  - UMD (index.umd.js) for browser script tags
-  - Full TypeScript definitions
+### Initial public release
 
-### Technical Details
-
-- 100% client-side processing (no server required)
-- Zero dependencies on external services
-- Full TypeScript support with comprehensive type definitions
-- Tree-shakeable ES module exports
-- Works in all modern browsers (Chrome 80+, Firefox 75+, Safari 14+, Edge 80+)
+### Added
+- Image compression (JPEG, PNG, WebP, AVIF)
+- PDF compression via `pdf-lib`
+- Async compression with progress callbacks
+- TypeScript-first API
+- 100% client-side processing — zero servers
 
 ---
 
-## Future Releases
+## How to use this Changelog
 
-### Planned for v1.1.0
-
-- [ ] Web Worker support for non-blocking compression
-- [ ] Progress callbacks for large file processing
-- [ ] Animated GIF/WebP support
-- [ ] Image cropping before compression
-- [ ] Watermark overlay option
-
-### Planned for v1.2.0
-
-- [ ] HEIC/HEIF input support
-- [ ] SVG optimization
-- [ ] PDF page extraction
-- [ ] PDF merge functionality
-- [ ] Custom compression presets
+1. **During development**: add changes under `[Unreleased]` using
+   `Added`, `Changed`, `Fixed`, `Deprecated`, `Removed` categories.
+2. **Before release**: copy `[Unreleased]` to a new dated version section,
+   bump `package.json`, then clear `[Unreleased]`.

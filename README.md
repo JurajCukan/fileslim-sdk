@@ -8,6 +8,8 @@ Client-side file compression. Zero servers, complete privacy.
 ## Features
 
 - 🖼️ **Image compression** — JPEG, PNG, WebP, **AVIF** with quality control
+- 🧠 **Best Algorithm mode** — tests candidate codecs in parallel and selects the smallest quality-safe output
+- ⚙️ **Worker-pool engine** — uses browser workers and transferable buffers for app-matching compression
 - 📄 **PDF compression** — Full embedded image recompression pipeline
 - 📊 **Quality scoring** — Optional SSIM measurement with rating
 - ⚡ **100% client-side** — No uploads, complete privacy
@@ -22,13 +24,13 @@ npm install @fileslim/compress
 
 ### Optional: Better compression quality
 
-Install @jsquash encoders for significantly better compression:
+Install @jsquash encoders for significantly better compression and Best Algorithm mode:
 
 ```bash
-npm install @jsquash/jpeg @jsquash/png @jsquash/avif
+npm install @jsquash/jpeg @jsquash/png @jsquash/webp @jsquash/avif @jsquash/oxipng
 ```
 
-The SDK automatically uses @jsquash when available and falls back to `browser-image-compression` otherwise.
+The SDK automatically uses @jsquash when available and falls back to `browser-image-compression` otherwise. Add `@jsquash/jxl` too if you want optional JPEG XL candidate testing in browsers that support it.
 
 ## Quick Start
 
@@ -36,7 +38,7 @@ The SDK automatically uses @jsquash when available and falls back to `browser-im
 import { compress, compressPDF, compressBatch } from '@fileslim/compress';
 
 // Compress an image (auto-selects best format: AVIF > WebP > JPEG)
-const result = await compress(file, { format: 'auto' });
+const result = await compress(file, { format: 'auto', mode: 'best' });
 console.log(`Saved ${result.savings}%`); // "Saved 72%"
 
 // Compress a PDF (full image recompression)
@@ -70,12 +72,30 @@ const result = await compress(file, {
   maxWidth: 1920,         // pixels (null = no resize)
   format: 'avif',         // 'auto' | 'jpeg' | 'png' | 'webp' | 'avif'
   stripMetadata: true,    // remove EXIF data (default: true)
-  measureQuality: true    // return SSIM score
+  measureQuality: true,   // return SSIM score
+  mode: 'best',           // use worker-pool Best Algorithm engine
+  minSSIM: 0.9            // reject too-lossy smaller candidates
 });
 
 // Quality score (only when measureQuality: true)
 console.log(result.qualityScore);
 // { ssim: 0.97, rating: 'good' }
+```
+
+### Best Algorithm mode
+
+Use `mode: 'best'` or `useBestAlgorithm: true` to match the FileSlim web app's current image engine. It analyzes the image, tests smart candidate formats in parallel via a worker pool, then returns the smallest result. When `measureQuality` is enabled, it can use `minSSIM` to choose the smallest candidate that still passes your quality threshold.
+
+```javascript
+const result = await compress(file, {
+  mode: 'best',
+  quality: 0.8,
+  format: 'auto',
+  measureQuality: true,
+  minSSIM: 0.9,
+  testAllFormats: true,
+  onProgress: (event) => console.log(event.message)
+});
 ```
 
 ### Format auto-detection
@@ -90,8 +110,10 @@ When `format: 'auto'` (default for `web` and `print` presets), the SDK picks the
 
 The SDK uses a hybrid approach:
 
-1. **@jsquash encoders** (AVIF, JPEG, PNG) — superior quality-per-byte, used when installed
-2. **browser-image-compression** — automatic fallback if @jsquash is not available
+1. **Best Algorithm worker pool** — JPEG, WebP, AVIF, PNG, and optional JPEG XL candidates in parallel
+2. **SSIM-aware selection** — optional quality thresholding with `measureQuality` + `minSSIM`
+3. **Standard @jsquash path** — AVIF, JPEG, PNG, WebP when a specific format is requested
+4. **browser-image-compression** — automatic fallback if @jsquash or workers are not available
 
 ## PDF Compression
 
@@ -157,6 +179,14 @@ interface CompressedFile {
     rating: 'excellent' | 'good' | 'acceptable' | 'poor';
   };
 }
+
+interface CompressOptions {
+  mode?: 'standard' | 'best';
+  useBestAlgorithm?: boolean;
+  minSSIM?: number;
+  testAllFormats?: boolean;
+  onProgress?: (event) => void;
+}
 ```
 
 ## Download Result
@@ -187,4 +217,4 @@ MIT © [Juraj Cukan](https://github.com/jurajcukan)
 
 ---
 
-Made with ❤️ by [FileSlim](https://fileslim.com)
+Made by [FileSlim](https://fileslim.com)

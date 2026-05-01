@@ -6,11 +6,10 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'FileSlimCompress',
-      formats: ['es', 'cjs', 'umd'],
+      formats: ['es', 'cjs'],
       fileName: (format) => {
         if (format === 'es') return 'index.es.js';
-        if (format === 'cjs') return 'index.cjs.js';
-        return 'index.umd.js';
+        return 'index.cjs.js';
       }
     },
     rollupOptions: {
@@ -20,7 +19,10 @@ export default defineConfig({
         '@jsquash/jpeg',
         '@jsquash/png',
         '@jsquash/webp',
-        '@jsquash/avif'
+        '@jsquash/avif',
+        '@jsquash/oxipng',
+        '@jsquash/jxl',
+        'jszip'
       ],
       output: {
         globals: {
@@ -29,7 +31,9 @@ export default defineConfig({
           '@jsquash/jpeg': 'jsquashJpeg',
           '@jsquash/png': 'jsquashPng',
           '@jsquash/webp': 'jsquashWebp',
-          '@jsquash/avif': 'jsquashAvif'
+          '@jsquash/avif': 'jsquashAvif',
+          '@jsquash/oxipng': 'jsquashOxipng',
+          '@jsquash/jxl': 'jsquashJxl'
         }
       }
     },
@@ -39,6 +43,14 @@ export default defineConfig({
       compress: {
         drop_console: true,
         drop_debugger: true
+      }
+    }
+  },
+
+  worker: {
+    rollupOptions: {
+      output: {
+        format: 'es'
       }
     }
   }
